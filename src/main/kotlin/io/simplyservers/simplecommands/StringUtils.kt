@@ -6,3 +6,5 @@ fun List<String>.sentenceEndingWith(word: String, prefixPlural: String = "", pre
     val firstPart = this.slice(0 until (size - 1))
     return "$prefixPlural ${firstPart.joinToString()}, $word ${last()}"
 }
+
+val String.oneWord get() = !this.contains(" ")

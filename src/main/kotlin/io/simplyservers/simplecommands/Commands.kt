@@ -20,11 +20,12 @@ fun FunctionNode.matches(matchName: String): Boolean {
 
 class ArgumentPreNode(val referenceName: String) : Node() {
 
+    init {
+        require(referenceName.oneWord){"referenceName must be one word"}
+    }
 
     var description: String? = null
 
-
-    //    fun description(string: String) {}
     fun <A> ifType(argumentType: ArgumentType<A>, block: ArgumentNode<A>.() -> Unit) {
         val argumentNode = ArgumentNode(referenceName, argumentType)
         nodes.add(argumentNode)
@@ -48,6 +49,7 @@ sealed class BaseNode : Node() {
     val executions = ArrayList<ExecuteInfo>()
 
     fun subCmd(name: String, vararg aliases: String, block: FunctionNode.() -> Unit) {
+        require(name.oneWord){"The name must be one word"}
         cmd(name, *aliases) {
             block(this)
             this@BaseNode.nodes.add(this)
@@ -55,6 +57,7 @@ sealed class BaseNode : Node() {
     }
 
     fun <T> argWithType(referenceName: String, type: ArgumentType<T>, blocK: ArgumentNode<T>.() -> Unit) {
+
         val arg = ArgumentPreNode(referenceName)
         arg.ifType(type, blocK)
 
