@@ -13,6 +13,18 @@ class BukkitCommandExecutor(private val baseNode: FunctionNode, private val send
     }
 
     private suspend fun matchingNode(nodeOn: Node, currentArgs: Array<String>) {
+
+        if(nodeOn is FunctionNode){
+            val permission = nodeOn.permission
+            if(permission != null){
+                val hasPermission = permission(sender)
+                if(!hasPermission){
+                    sender.sendMessage("You do not have permission to do that command.")
+                    return
+                }
+            }
+        }
+
         if (nodeOn.nodes.isNotEmpty() && currentArgs.isNotEmpty()) {
             val firstArg = currentArgs.first()
             val nextArgs = currentArgs.sliceArray(1 until currentArgs.size)
@@ -35,7 +47,6 @@ class BukkitCommandExecutor(private val baseNode: FunctionNode, private val send
                     is FunctionNode -> {
                         val matches = node.matches(firstArg)
                         if (!matches) continue@loop
-//                        TODO("permission")
                         matchingNode(node, nextArgs)
                         return // avoid end execution
                     }
