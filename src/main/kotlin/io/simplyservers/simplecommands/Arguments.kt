@@ -5,6 +5,9 @@ import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
 import java.util.*
 
+/**
+ * An argument which is a double
+ */
 object ArgumentDouble : ArgumentType<Double> {
     override val name = "double"
 
@@ -82,14 +85,20 @@ object ArgumentInt : ArgumentType<Int> {
 
 interface ArgumentType<T> {
 
-//    fun examples(): List<T>
-    /**h
-     * @return Null if could not process
+    /**
+     * @return returns null if could not process. SimpleCommand will then move on to the next ArgumentType if one exists.
+     * If none exists, it will fail.
      */
     suspend fun process(string: String): T?
 
+    /**
+     * The name of the argument
+     */
     val name: String
 
+    /**
+     * Give a list of possible arguments
+     */
     suspend fun autoComplete(): List<String>
 }
 

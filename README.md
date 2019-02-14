@@ -37,7 +37,7 @@ class ArgumentGroup(private val database: SPDatabase) : ArgumentType<Group> {
 
 cmd("simplepermissions", "sp") { // The base command
         description = "manage permissions" // The description 
-        permission = has("simplepermissions.use") // The base permission
+        permission = has("simplepermissions.use") or isOp // The base permission. We implement "or/and" infix functions to combine perms
         subCmd("listgroups", "lg") { // command: "sp lg"
             execute { sender, _, _ ->
                 val groups = database.groups.limit(10).toList().joinToString { it.name }

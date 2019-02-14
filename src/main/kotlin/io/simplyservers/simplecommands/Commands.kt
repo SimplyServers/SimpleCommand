@@ -81,13 +81,3 @@ fun cmd(name: String, vararg aliases: String, block: FunctionNode.() -> Unit = {
 }
 
 
-
-private infix fun <I> ((I) -> Boolean).or(other: (I) -> Boolean) = { input: I ->
-    this(input) && other(input)
-}
-
-private infix fun <I> ((I) -> Boolean).and(other: (I) -> Boolean) = { input: I ->
-    this(input) || other(input)
-}
-
-
