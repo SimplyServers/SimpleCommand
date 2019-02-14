@@ -1,13 +1,13 @@
 # SimpleCommand
 Make commands, simply.
 
-A simple library for easily making complicated commands using all the beauty of Kotlin. Inspiration from [brigadier](https://github.com/Mojang/brigadier).
+A simple library for easily making complicated commands for those who ❤️ Kotlin. Inspiration from [brigadier](https://github.com/Mojang/brigadier).
 
 ## Why use instead of other libraries?
 - looks 🔥
-- Commands are automatically called async (with Kotlin coroutines and suspend functions)
-  - async arg processing and command execution
-- Property delegation to process args
+- Commands are automatically called asyncronously (with Kotlin coroutines and suspend functions)
+  - async arg processing and command execution. Nice for web requests and database access
+- Property delegation to process args is ❄️
   - ```kotlin
       val group: Group by args
       val permission: String by args
