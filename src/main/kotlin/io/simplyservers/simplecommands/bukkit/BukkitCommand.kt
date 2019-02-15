@@ -11,7 +11,12 @@ import org.bukkit.command.CommandSender
 import org.bukkit.plugin.Plugin
 
 // fun <S> cmd(name: String, vararg aliases: String, block: FunctionNode<S>.() -> Unit = {}): Registerable {
-fun bukkitCommand(name: String, plugin: Plugin, vararg aliases: String, block: FunctionNode<CommandSender>.() -> Unit = {}): Registerable{
+fun bukkitCommand(
+    name: String,
+    plugin: Plugin,
+    vararg aliases: String,
+    block: FunctionNode<CommandSender>.() -> Unit = {}
+): Registerable {
     val cmd = cmd(name, *aliases, block = block)
     return object : Registerable {
         override fun register() {
@@ -24,7 +29,13 @@ fun bukkitCommand(name: String, plugin: Plugin, vararg aliases: String, block: F
                 ): Boolean {
                     val simpleCommandExecutor = SimpleCommandExecutor(cmd, sender, args)
                     GlobalScope.launch {
-                        simpleCommandExecutor.run()
+                        try {
+                            simpleCommandExecutor.run()
+                        } catch (e: SimpleCommandExecutor.PermissionException) {
+                            sender.sendMessage("You do not have permission")
+                        } catch (e: SimpleCommandExecutor.CommandSyntaxException) {
+                            sender.sendMessage("Wrong syntax")
+                        }
                     }
                     return true
                 }
