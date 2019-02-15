@@ -39,7 +39,8 @@ cmd("simplepermissions", "sp") { // The base command
         description = "manage permissions" // The description 
         permission = has("simplepermissions.use") or isOp // The base permission. We implement "or/and" infix functions to combine perms
         subCmd("listgroups", "lg") { // command: "sp lg"
-            execute { sender, _, _ ->
+            execute { sender, _, _ -> // executed for "sp lg"
+                delay(10_000) // execute supports suspending functions (we are waiting 10k ms for no reason)
                 val groups = database.groups.limit(10).toList().joinToString { it.name }
                 sender.sendMessage(
                     LangBukkit.listGroups.formatParams(
