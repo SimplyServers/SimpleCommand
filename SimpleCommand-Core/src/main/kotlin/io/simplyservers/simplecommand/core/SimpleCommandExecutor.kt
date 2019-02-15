@@ -1,6 +1,5 @@
-package io.simplyservers.simplecommands.bukkit
+package io.simplyservers.simplecommand.core
 
-import io.simplyservers.simplecommands.*
 import java.util.*
 
 /**
@@ -9,8 +8,12 @@ import java.util.*
 class SimpleCommandExecutor<S>(
     private val baseNode: FunctionNode<S>,
     private val executeSender: S,
-    val args: Array<String>
+    private val args: Array<String>
 ) {
+
+    constructor(baseNode: FunctionNode<S>,
+                executeSender: S,
+                args: String): this(baseNode, executeSender, args.split(" ").toTypedArray())
 
     private val argsMap = HashMap<String, Any>()
 

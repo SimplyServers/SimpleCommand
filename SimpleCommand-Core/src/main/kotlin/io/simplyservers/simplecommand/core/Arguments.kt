@@ -1,9 +1,4 @@
-package io.simplyservers.simplecommands
-
-import org.bukkit.OfflinePlayer
-import org.bukkit.entity.Player
-import org.bukkit.plugin.Plugin
-import java.util.*
+package io.simplyservers.simplecommand.core
 
 /**
  * An argument which is a double
@@ -30,43 +25,6 @@ object ArgumentString : ArgumentType<String> {
 
     override suspend fun autoComplete(): List<String> {
         return emptyList()
-    }
-}
-
-class ArgumentOnlinePlayer(private val plugin: Plugin) : ArgumentType<Player> {
-    override suspend fun process(string: String): Player? {
-        return plugin.server.getPlayer(string)
-    }
-
-    override suspend fun autoComplete(): List<String> {
-        return plugin.server.onlinePlayers.map { it.name }
-    }
-
-    override val name: String get() = "online player"
-}
-
-class ArgumentOfflinePlayer(private val plugin: Plugin) :
-    ArgumentType<OfflinePlayer> {
-
-    override suspend fun autoComplete(): List<String> {
-        TODO("not implemented")
-    }
-
-    override val name: String get() = TODO()
-
-    override suspend fun process(string: String): OfflinePlayer? {
-
-        val uuid = try {
-            UUID.fromString(string)
-        } catch (e: IllegalArgumentException) {
-            null
-        }
-
-        return if (uuid == null) {
-            plugin.server.getOfflinePlayer(string)
-        } else {
-            plugin.server.getOfflinePlayer(uuid)
-        }
     }
 }
 

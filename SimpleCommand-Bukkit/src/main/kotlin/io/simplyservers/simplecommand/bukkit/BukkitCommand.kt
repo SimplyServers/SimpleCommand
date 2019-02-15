@@ -1,13 +1,13 @@
-package io.simplyservers.simplecommands.bukkit
-
-import io.simplyservers.simplecommands.FunctionNode
-import io.simplyservers.simplecommands.Registerable
-import io.simplyservers.simplecommands.cmd
+package io.simplyservers.simplecommand.bukkit
+import io.simplyservers.simplecommand.core.FunctionNode
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
+import io.simplyservers.simplecommand.core.Registerable
+import io.simplyservers.simplecommand.core.SimpleCommandExecutor
+import io.simplyservers.simplecommand.core.cmd
 import org.bukkit.plugin.Plugin
 
 // fun <S> cmd(name: String, vararg aliases: String, block: FunctionNode<S>.() -> Unit = {}): Registerable {

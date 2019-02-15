@@ -1,4 +1,4 @@
-package io.simplyservers.simplecommands
+package io.simplyservers.simplecommand.core
 
 import java.util.*
 

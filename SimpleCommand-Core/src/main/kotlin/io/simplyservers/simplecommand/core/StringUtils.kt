@@ -1,4 +1,4 @@
-package io.simplyservers.simplecommands
+package io.simplyservers.simplecommand.core
 
 fun List<String>.sentenceEndingWith(word: String, prefixPlural: String = "", prefixSingular: String = ""): String {
     if(isEmpty()) return ""
