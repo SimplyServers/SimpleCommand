@@ -1,26 +1,36 @@
 package io.simplyservers.simplecommands.bukkit
 
 import io.simplyservers.simplecommands.*
-import org.bukkit.command.CommandSender
 import java.util.*
 
-class BukkitCommandExecutor(private val baseNode: FunctionNode, private val sender: CommandSender, private val args: Array<String>) {
+/**
+ * executeSender and sender should be same person
+ */
+class SimpleCommandExecutor<S>(
+    private val baseNode: FunctionNode<S>,
+    private val executeSender: S,
+    val args: Array<String>
+) {
 
     private val argsMap = HashMap<String, Any>()
 
-    suspend fun run(){
+    suspend fun run()  {
         matchingNode(baseNode, args)
     }
 
-    private suspend fun matchingNode(nodeOn: Node, currentArgs: Array<String>) {
+    //    class PermissionException : Throwable("A command was executed permission to do that command")
+    class PermissionException : Throwable("A command was executed permission to do that command")
 
-        if(nodeOn is FunctionNode){
+    data class CommandSyntaxException(val node: Node<*>): Throwable()
+
+    private suspend fun matchingNode(nodeOn: Node<S>, currentArgs: Array<String>) {
+
+        if (nodeOn is FunctionNode) {
             val permission = nodeOn.permission
-            if(permission != null){
-                val hasPermission = permission(sender)
-                if(!hasPermission){
-                    sender.sendMessage("You do not have permission to do that command.")
-                    return
+            if (permission != null) {
+                val hasPermission = permission(executeSender)
+                if (!hasPermission) {
+                    throw PermissionException()
                 }
             }
         }
@@ -34,7 +44,7 @@ class BukkitCommandExecutor(private val baseNode: FunctionNode, private val send
                     is ArgumentPreNode -> {
                         argumentLoop@ for (argumentNode in node.nodes) {
                             when (argumentNode) {
-                                is ArgumentNode<*> -> {
+                                is ArgumentNode<S, *> -> {
                                     val argumentType = argumentNode.argumentType
                                     val processed = argumentType.process(firstArg) ?: continue@argumentLoop
                                     argsMap[argumentNode.referenceName] = processed
@@ -56,26 +66,36 @@ class BukkitCommandExecutor(private val baseNode: FunctionNode, private val send
         when (nodeOn) {
             is BaseNode -> {
                 if (nodeOn.executions.isEmpty()) { // We want to tell the player what they can do
-                    if (nodeOn is ArgumentNode<*>) {
-                        val description = nodeOn.description
-                        if (description != null) {
-                            sender.sendMessage("You entered $description.")
-                        }
-                    }
-                    val helpMessage = nodeOn.nodes.helpMessage()
-                    sender.sendMessage(helpMessage)
-                    return
+                    throw CommandSyntaxException(nodeOn)
+                } else {
+                    argsMap["additionalArgs"] = currentArgs.toList()
+
+                    nodeOn.executions.forEach { it(executeSender, nodeOn, argsMap) }
                 }
-
-                argsMap["additionalArgs"] = currentArgs.toList()
-
-                nodeOn.executions.forEach { it(sender, nodeOn, argsMap) }
             }
             else -> throw IllegalStateException("should never be on a non-base node")
         }
+
+
     }
 
-    fun Collection<Node>.helpMessage() = buildString {
+    private fun BaseNode<*>.failMsg(): Nothing {
+        TODO()
+//        if (this.executions.isEmpty()) { // We want to tell the player what they can do
+//            if (this is ArgumentNode<*, *>) {
+//                val description = this.description
+//                if (description != null) {
+//
+//                    sender.sendMessage("You entered $description.")
+//                }
+//            }
+//            val helpMessage = nodeOn.nodes.helpMessage()
+//            sender.sendMessage(helpMessage)
+//            return
+//        }
+    }
+
+    private fun Collection<Node<S>>.helpMessage() = buildString {
 
         if (this@helpMessage.isEmpty()) {
             append("You do not have any other options. Report this to an admin")
@@ -93,7 +113,7 @@ class BukkitCommandExecutor(private val baseNode: FunctionNode, private val send
         }
     }
 
-    private fun FunctionNode.helpMessageString() = buildString {
+    private fun FunctionNode<*>.helpMessageString() = buildString {
         val names = sequenceOf(name, *(aliases)).joinToString(separator = "|")
         append("cmd: [$names]")
         if (description != null) {
@@ -101,12 +121,12 @@ class BukkitCommandExecutor(private val baseNode: FunctionNode, private val send
         }
     }
 
-    private fun ArgumentPreNode.helpMessageString() = buildString {
+    private fun ArgumentPreNode<*>.helpMessageString() = buildString {
         append("arg: $referenceName")
 
         val argTypes = nodes
             .asSequence()
-            .filterIsInstance<ArgumentNode<*>>()
+            .filterIsInstance<ArgumentNode<*, *>>()
             .map {
                 it.description
             }
