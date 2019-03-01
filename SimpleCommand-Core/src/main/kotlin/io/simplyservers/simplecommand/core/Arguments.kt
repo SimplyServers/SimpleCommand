@@ -28,6 +28,15 @@ object ArgumentString : ArgumentType<String> {
     }
 }
 
+object ArgumentLong: ArgumentType<Long> {
+
+    override val name = "long"
+
+    override suspend fun process(string: String) = string.toLongOrNull()
+
+    override suspend fun autoComplete(): List<String> = emptyList()
+
+}
 object ArgumentInt : ArgumentType<Int> {
 
     override val name = "int"
