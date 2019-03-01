@@ -31,6 +31,10 @@ class ArgumentPreNode<S>(val referenceName: String) : Node<S>() {
     }
 }
 
+@DslMarker
+annotation class CommandTagMarker
+
+@CommandTagMarker
 sealed class Node<S> {
     val nodes = ArrayList<Node<S>>()
 }
@@ -66,7 +70,7 @@ sealed class BaseNode<S> : Node<S>() {
         this@BaseNode.nodes.add(arg)
     }
 
-
+    @CommandTagMarker
     fun execute(block: suspend (sender: S, node: Node<S>, args: Map<String, Any?>) -> Unit) {
         executions.add(block)
     }
@@ -77,5 +81,3 @@ fun <S> cmd(name: String, vararg aliases: String, block: FunctionNode<S>.() -> U
     block(functionNode)
     return functionNode
 }
-
-
