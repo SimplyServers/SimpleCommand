@@ -2,50 +2,98 @@ package io.simplyservers.simplecommand.core
 
 import java.util.*
 
-/**
- * executeSender and sender should be same person
- */
-class SimpleCommandExecutor<S>(
-    private val baseNode: FunctionNode<S>,
-    private val executeSender: S,
-    private val args: Array<String>
-) {
 
-    constructor(baseNode: FunctionNode<S>,
-                executeSender: S,
-                args: String): this(baseNode, executeSender, args.split(" ").toTypedArray())
+class PermissionException : Throwable("A command was executed permission to do that command")
 
-    private val argsMap = HashMap<String, Any>()
+interface Formatter {
+    fun generateHelpMessage(commandSyntaxException: CommandSyntaxException): String
+    companion object Default : Formatter {
 
-    suspend fun run()  {
-        matchingNode(baseNode, args)
+        private fun FunctionNode<*>.helpMessageString(builder: StringBuilder) {
+            val equivalent = sequenceOf(name, *(aliases)).toList()
+            if(equivalent.size == 1) builder.append("\t${equivalent.first()}")
+            else {
+                val names = equivalent.joinToString(separator = "|")
+                builder.append("\t[$names]")
+            }
+            if (description != null) builder.append(" - $description")
+            builder.appendln()
+        }
+
+        private fun ArgumentPreNode<*>.helpMessageString(builder: StringBuilder) {
+            builder.append("\t<$referenceName>")
+            if(description != null) builder.append(" - $description")
+            builder.appendln()
+
+            children
+                .asSequence()
+                .filterIsInstance<ArgumentNode<*, *>>()
+                .forEach { node ->
+                    val argumentType = node.argumentType
+                    builder.append("\t\t:${argumentType.name}")
+                    if (node.description != null) builder.append(" - ${node.description}")
+                    builder.appendln()
+                }
+        }
+
+        override fun generateHelpMessage(commandSyntaxException: CommandSyntaxException): String {
+            val node = commandSyntaxException.node
+            val subCommands = LinkedList<FunctionNode<*>>()
+            val argumentPreNodes = LinkedList<ArgumentPreNode<*>>()
+
+            node.children.forEach {
+                when (it) {
+                    is FunctionNode<*> -> subCommands.add(it)
+                    is ArgumentPreNode<*> -> argumentPreNodes.add(it)
+                }
+            }
+
+            return buildString {
+                if (node.children.isEmpty()) append("You do not have any other options. Report this to an admin")
+                if (subCommands.isNotEmpty()) {
+                    appendln("Subcommands")
+                    subCommands.forEach {
+                        it.helpMessageString(this)
+                    }
+                }
+                argumentPreNodes.forEach {
+                    appendln("Arguments")
+                    it.helpMessageString(this)
+                }
+            }
+        }
+
+
     }
+}
 
-    //    class PermissionException : Throwable("A command was executed permission to do that command")
-    class PermissionException : Throwable("A command was executed permission to do that command")
+data class CommandSyntaxException(val node: BaseNode<*>) : Throwable()
 
-    data class CommandSyntaxException(val node: Node<*>): Throwable()
+fun String.toArgs() = trim().split(" ").toTypedArray()
 
-    private suspend fun matchingNode(nodeOn: Node<S>, currentArgs: Array<String>) {
+suspend fun <S> commandExecutor(baseNode: FunctionNode<S>, executeSender: S, args: Array<String>) {
+    val argsMap = HashMap<String, Any>()
+
+    suspend fun matchingNode(nodeOn: Node<S>, currentArgs: Array<String>) {
 
         if (nodeOn is FunctionNode) {
-            val permission = nodeOn.permission
-            if (permission != null) {
-                val hasPermission = permission(executeSender)
+            val permissionGetter = nodeOn.permission
+            if (permissionGetter != null) {
+                val hasPermission = permissionGetter(executeSender)
                 if (!hasPermission) {
                     throw PermissionException()
                 }
             }
         }
 
-        if (nodeOn.nodes.isNotEmpty() && currentArgs.isNotEmpty()) {
+        if (nodeOn.children.isNotEmpty() && currentArgs.isNotEmpty()) {
             val firstArg = currentArgs.first()
             val nextArgs = currentArgs.sliceArray(1 until currentArgs.size)
 
-            loop@ for (node in nodeOn.nodes) {
+            loop@ for (node in nodeOn.children) {
                 when (node) {
                     is ArgumentPreNode -> {
-                        argumentLoop@ for (argumentNode in node.nodes) {
+                        argumentLoop@ for (argumentNode in node.children) {
                             when (argumentNode) {
                                 is ArgumentNode<S, *> -> {
                                     val argumentType = argumentNode.argumentType
@@ -72,7 +120,6 @@ class SimpleCommandExecutor<S>(
                     throw CommandSyntaxException(nodeOn)
                 } else {
                     argsMap["additionalArgs"] = currentArgs.toList()
-
                     nodeOn.executions.forEach { it(executeSender, nodeOn, argsMap) }
                 }
             }
@@ -82,66 +129,7 @@ class SimpleCommandExecutor<S>(
 
     }
 
-    private fun BaseNode<*>.failMsg(): Nothing {
-        TODO()
-//        if (this.executions.isEmpty()) { // We want to tell the player what they can do
-//            if (this is ArgumentNode<*, *>) {
-//                val description = this.description
-//                if (description != null) {
-//
-//                    sender.sendMessage("You entered $description.")
-//                }
-//            }
-//            val helpMessage = nodeOn.nodes.helpMessage()
-//            sender.sendMessage(helpMessage)
-//            return
-//        }
-    }
+    matchingNode(baseNode, args)
 
-    private fun Collection<Node<S>>.helpMessage() = buildString {
-
-        if (this@helpMessage.isEmpty()) {
-            append("You do not have any other options. Report this to an admin")
-            return@buildString
-        }
-        for (node in this@helpMessage) {
-            when (node) {
-                is ArgumentPreNode -> {
-                    append(node.helpMessageString() + "\n")
-                }
-                is FunctionNode -> {
-                    append(node.helpMessageString() + "\n")
-                }
-            }
-        }
-    }
-
-    private fun FunctionNode<*>.helpMessageString() = buildString {
-        val names = sequenceOf(name, *(aliases)).joinToString(separator = "|")
-        append("cmd: [$names]")
-        if (description != null) {
-            append(" - $description")
-        }
-    }
-
-    private fun ArgumentPreNode<*>.helpMessageString() = buildString {
-        append("arg: $referenceName")
-
-        val argTypes = nodes
-            .asSequence()
-            .filterIsInstance<ArgumentNode<*, *>>()
-            .map {
-                it.description
-            }
-            .filterNotNull()
-            .toList()
-        if (description != null) {
-            append(" - $description")
-        }
-        if (argTypes.isNotEmpty()) {
-            val argTypesEnglish =
-                argTypes.sentenceEndingWith("or", prefixPlural = "can either be", prefixSingular = "must be")
-            append(" ... $argTypesEnglish")
-        }
-    }
 }
+

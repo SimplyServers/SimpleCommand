@@ -2,21 +2,26 @@ package io.simplyservers.simplecommand.core
 
 import java.util.*
 
-//typealias PermissionAcceptor = (S) -> Boolean
+typealias PermissionGetter<_USER> = (_USER) -> Boolean
 
-class FunctionNode<S>(val name: String, vararg val aliases: String) : BaseNode<S>() {
+class FunctionNode<_USER>(val name: String, vararg val aliases: String) : BaseNode<_USER>() {
     var description: String? = null
-    var permission: ((S) -> Boolean)? = null
+    var permission: PermissionGetter<_USER>? = null
+    override fun toString(): String {
+        return "FunctionNode(name='$name', aliases=${aliases.contentToString()}, description=$description, permission=$permission)"
+    }
+
 }
 
-fun FunctionNode<*>.matches(matchName: String): Boolean {
-    return sequence {
+val FunctionNode<*>.equivalentNames
+    get() = sequence {
         yield(name)
         yieldAll(aliases.iterator())
-    }.any { it.equals(matchName, ignoreCase = true) }
-}
+    }
 
-class ArgumentPreNode<S>(val referenceName: String) : Node<S>() {
+fun FunctionNode<*>.matches(matchName: String): Boolean = equivalentNames.any { it.equals(matchName, ignoreCase = true) }
+
+class ArgumentPreNode<_USER>(val referenceName: String) : Node<_USER>() {
 
     init {
         require(referenceName.oneWord) { "referenceName must be one word" }
@@ -24,9 +29,9 @@ class ArgumentPreNode<S>(val referenceName: String) : Node<S>() {
 
     var description: String? = null
 
-    fun <A> ifType(argumentType: ArgumentType<A>, block: ArgumentNode<S, A>.() -> Unit) {
-        val argumentNode = ArgumentNode<S, A>(referenceName, argumentType)
-        nodes.add(argumentNode)
+    fun <_ARGTYPE> ifType(argumentType: ArgumentType<_ARGTYPE>, block: ArgumentNode<_USER, _ARGTYPE>.() -> Unit) {
+        val argumentNode = ArgumentNode<_USER, _ARGTYPE>(referenceName, argumentType)
+        children.add(argumentNode)
         block(argumentNode)
     }
 }
@@ -36,42 +41,46 @@ annotation class CommandTagMarker
 
 @CommandTagMarker
 sealed class Node<S> {
-    val nodes = ArrayList<Node<S>>()
+    val children = ArrayList<Node<S>>()
 }
 
 class ArgumentNode<S, T>(val referenceName: String, val argumentType: ArgumentType<T>) : BaseNode<S>() {
     var description: String? = null
+    override fun toString(): String {
+        return "ArgumentNode(referenceName='$referenceName', argumentType=$argumentType, description=$description)"
+    }
 }
 
-sealed class BaseNode<S> : Node<S>() {
+sealed class BaseNode<_USER> : Node<_USER>() {
 
-    val executions = ArrayList<suspend (sender: S, node: Node<S>, args: Map<String, Any?>) -> Unit>()
+    val executions = ArrayList<suspend (sender: _USER, node: Node<_USER>, args: Map<String, Any?>) -> Unit>()
 
-    fun subCmd(name: String, vararg aliases: String, block: FunctionNode<S>.() -> Unit) {
+    fun subCmd(name: String, vararg aliases: String, block: FunctionNode<_USER>.() -> Unit) {
         require(name.oneWord) { "The name must be one word" }
-        cmd<S>(name, *aliases) {
+        cmd<_USER>(name, *aliases) {
             block(this)
-            this@BaseNode.nodes.add(this)
+            this@BaseNode.children.add(this)
         }
     }
 
-    fun <T> argWithType(referenceName: String, type: ArgumentType<T>, block: ArgumentNode<S, T>.() -> Unit) {
+    fun <T> argWithType(referenceName: String, type: ArgumentType<T>, description: String? = null, block: ArgumentNode<_USER, T>.() -> Unit) {
 
-        val arg = ArgumentPreNode<S>(referenceName)
+        val arg = ArgumentPreNode<_USER>(referenceName)
+        arg.description = description
         arg.ifType(type, block)
 
-        this@BaseNode.nodes.add(arg)
+        this@BaseNode.children.add(arg)
     }
 
-    fun arg(referenceName: String, block: ArgumentPreNode<S>.() -> Unit) {
-        val arg = ArgumentPreNode<S>(referenceName)
+    fun arg(referenceName: String, block: ArgumentPreNode<_USER>.() -> Unit) {
+        val arg = ArgumentPreNode<_USER>(referenceName)
         block(arg)
         // TODO: fix
-        this@BaseNode.nodes.add(arg)
+        this@BaseNode.children.add(arg)
     }
 
     @CommandTagMarker
-    fun execute(block: suspend (sender: S, node: Node<S>, args: Map<String, Any?>) -> Unit) {
+    fun execute(block: suspend (sender: _USER, node: Node<_USER>, args: Map<String, Any?>) -> Unit) {
         executions.add(block)
     }
 }
@@ -81,3 +90,4 @@ fun <S> cmd(name: String, vararg aliases: String, block: FunctionNode<S>.() -> U
     block(functionNode)
     return functionNode
 }
+

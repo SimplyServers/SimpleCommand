@@ -1,4 +1,4 @@
-package io.simplyservers.simplecommand.test
+package io.simplyservers.simplecommand.core
 
 interface MockPlayer {
     fun hasPermission(permission: String): Boolean

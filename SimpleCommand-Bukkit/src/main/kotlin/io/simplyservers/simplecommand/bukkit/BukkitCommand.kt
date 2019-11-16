@@ -1,13 +1,10 @@
 package io.simplyservers.simplecommand.bukkit
-import io.simplyservers.simplecommand.core.FunctionNode
+import io.simplyservers.simplecommand.core.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
-import io.simplyservers.simplecommand.core.Registerable
-import io.simplyservers.simplecommand.core.SimpleCommandExecutor
-import io.simplyservers.simplecommand.core.cmd
 import org.bukkit.plugin.Plugin
 
 // fun <S> cmd(name: String, vararg aliases: String, block: FunctionNode<S>.() -> Unit = {}): Registerable {
@@ -20,25 +17,18 @@ fun bukkitCommand(
     val cmd = cmd(name, *aliases, block = block)
     return object : Registerable {
         override fun register() {
-            val commandExecutor = object : CommandExecutor {
-                override fun onCommand(
-                    sender: CommandSender,
-                    command: Command?,
-                    label: String?,
-                    args: Array<String>
-                ): Boolean {
-                    val simpleCommandExecutor = SimpleCommandExecutor(cmd, sender, args)
-                    GlobalScope.launch {
-                        try {
-                            simpleCommandExecutor.run()
-                        } catch (e: SimpleCommandExecutor.PermissionException) {
-                            sender.sendMessage("You do not have permission")
-                        } catch (e: SimpleCommandExecutor.CommandSyntaxException) {
-                            sender.sendMessage("Wrong syntax")
-                        }
+            val commandExecutor = CommandExecutor { sender, command, label, args ->
+                GlobalScope.launch {
+                    try {
+                        commandExecutor(cmd, sender, args)
+                    } catch (e: PermissionException) {
+                        sender.sendMessage("You do not have permission")
+                    } catch (e: CommandSyntaxException) {
+                        sender.sendMessage("Wrong syntax")
+                        sender.sendMessage(Formatter.generateHelpMessage(e))
                     }
-                    return true
                 }
+                true
             }
 
             val pluginCommand = plugin.server.getPluginCommand(name)
