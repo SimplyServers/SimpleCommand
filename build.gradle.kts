@@ -4,10 +4,10 @@ plugins {
     kotlin("jvm") version "1.3.21" apply false
 }
 
-group = "io.simplyservers"
-version = "1.0-SNAPSHOT"
 
 allprojects {
+    group = "io.simplyservers"
+    version = "1.0-SNAPSHOT"
     repositories {
         jcenter()
         mavenCentral()

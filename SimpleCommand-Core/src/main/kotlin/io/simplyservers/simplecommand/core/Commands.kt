@@ -63,6 +63,11 @@ sealed class BaseNode<_USER> : Node<_USER>() {
         }
     }
 
+    fun subCmd(name: String, vararg aliases: String, functionNode: FunctionNode<_USER>){
+        require(name.oneWord) { "The name must be one word" }
+        children.add(functionNode)
+    }
+
     fun <T> argWithType(referenceName: String, type: ArgumentType<T>, description: String? = null, block: ArgumentNode<_USER, T>.() -> Unit) {
 
         val arg = ArgumentPreNode<_USER>(referenceName)
