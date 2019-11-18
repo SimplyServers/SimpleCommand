@@ -1,9 +1,8 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.3.21" apply false
+    kotlin("jvm") version "1.3.50" apply false
 }
-
 
 allprojects {
     group = "io.simplyservers"
