@@ -5,10 +5,11 @@ import java.util.*
 typealias PermissionGetter<_USER> = (_USER, Permissible) -> Boolean
 
 fun <T> has(permission: String): PermissionGetter<T> = { _, hasPermission -> hasPermission(permission) }
+fun <T> none(): PermissionGetter<T> = { _, _ -> true}
 
 class FunctionNode<_USER>(val name: String, vararg val aliases: String, val group: String? = null, private val previousPath: String) : BaseNode<_USER>() {
     var description: String? = null
-    var permission: PermissionGetter<_USER>? = {s, hasPerm -> hasPerm(path) }
+    var permission: PermissionGetter<_USER>? = { _, hasPerm -> hasPerm(path) }
 
     override val path get() = genPath(previousPath)
 
