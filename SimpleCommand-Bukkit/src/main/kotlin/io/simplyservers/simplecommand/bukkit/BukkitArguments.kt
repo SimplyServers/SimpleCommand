@@ -1,44 +1,28 @@
 package io.simplyservers.simplecommand.bukkit
 
-import io.simplyservers.simplecommand.core.ArgumentType
+import io.simplyservers.simplecommand.core.SingularArg
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
 import java.util.*
 
-class ArgumentOnlinePlayer(private val plugin: Plugin) : ArgumentType<Player> {
-    override suspend fun process(string: String): Player? {
-        return plugin.server.getPlayer(string)
-    }
-
-    override suspend fun autoComplete(): List<String> {
-        return plugin.server.onlinePlayers.map { it.name }
-    }
-
-    override val name: String get() = "online player"
+class ArgumentOnlinePlayer(private val plugin: Plugin) : SingularArg<Player>("online player") {
+    override suspend fun processArg(arg: String) = plugin.server.getPlayer(arg)
+    override suspend fun autoComplete() = plugin.server.onlinePlayers.map { it.name }
 }
 
-class ArgumentOfflinePlayer(private val plugin: Plugin) :
-    ArgumentType<OfflinePlayer> {
-
-    override suspend fun autoComplete(): List<String> {
-        TODO("not implemented")
+private fun String.UUIDOrNull(): UUID? {
+    return try {
+        UUID.fromString(this)
+    } catch (e: IllegalArgumentException) {
+        null
     }
+}
 
-    override val name: String get() = TODO()
-
-    override suspend fun process(string: String): OfflinePlayer? {
-
-        val uuid = try {
-            UUID.fromString(string)
-        } catch (e: IllegalArgumentException) {
-            null
-        }
-
-        return if (uuid == null) {
-            plugin.server.getOfflinePlayer(string)
-        } else {
-            plugin.server.getOfflinePlayer(uuid)
-        }
+class ArgumentOfflinePlayer(private val plugin: Plugin) : SingularArg<OfflinePlayer>("player") {
+    private val server get() = plugin.server
+    override suspend fun processArg(arg: String): OfflinePlayer? {
+        val uuid = arg.UUIDOrNull()
+        return if (uuid == null) server.getOfflinePlayer(arg) else server.getOfflinePlayer(uuid)
     }
 }

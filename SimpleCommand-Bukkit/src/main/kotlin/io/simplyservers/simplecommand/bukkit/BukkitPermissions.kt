@@ -1,10 +1,12 @@
 package io.simplyservers.simplecommand.bukkit
 
+import io.simplyservers.simplecommand.core.PermissionGetter
 import org.bukkit.command.CommandSender
 
 /**
  * If the commandSender is op
  */
-val isOp = { sender: CommandSender -> sender.isOp }
+val isOp: PermissionGetter<CommandSender> = { sender, _ -> sender.isOp }
 
-fun has(permission: String) = { sender: CommandSender -> sender.hasPermission(permission) }
+
+

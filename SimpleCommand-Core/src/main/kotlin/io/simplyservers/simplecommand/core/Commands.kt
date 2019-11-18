@@ -2,9 +2,11 @@ package io.simplyservers.simplecommand.core
 
 import java.util.*
 
-typealias PermissionGetter<_USER> = (_USER) -> Boolean
+typealias PermissionGetter<_USER> = (_USER, Permissible) -> Boolean
 
-class FunctionNode<_USER>(val name: String, vararg val aliases: String) : BaseNode<_USER>() {
+fun <T> has(permission: String): PermissionGetter<T> = { _, hasPermission -> hasPermission(permission) }
+
+class FunctionNode<_USER>(val name: String, vararg val aliases: String, val group: String? = null) : BaseNode<_USER>() {
     var description: String? = null
     var permission: PermissionGetter<_USER>? = null
     override fun toString(): String {
@@ -19,7 +21,8 @@ val FunctionNode<*>.equivalentNames
         yieldAll(aliases.iterator())
     }
 
-fun FunctionNode<*>.matches(matchName: String): Boolean = equivalentNames.any { it.equals(matchName, ignoreCase = true) }
+fun FunctionNode<*>.matches(matchName: String): Boolean =
+    equivalentNames.any { it.equals(matchName, ignoreCase = true) }
 
 class ArgumentPreNode<_USER>(val referenceName: String) : Node<_USER>() {
 
@@ -63,12 +66,17 @@ sealed class BaseNode<_USER> : Node<_USER>() {
         }
     }
 
-    fun subCmd(name: String, vararg aliases: String, functionNode: FunctionNode<_USER>){
+    fun subCmd(name: String, vararg aliases: String, functionNode: FunctionNode<_USER>) {
         require(name.oneWord) { "The name must be one word" }
         children.add(functionNode)
     }
 
-    fun <T> argWithType(referenceName: String, type: ArgumentType<T>, description: String? = null, block: ArgumentNode<_USER, T>.() -> Unit) {
+    fun <T> argWithType(
+        referenceName: String,
+        type: ArgumentType<T>,
+        description: String? = null,
+        block: ArgumentNode<_USER, T>.() -> Unit
+    ) {
 
         val arg = ArgumentPreNode<_USER>(referenceName)
         arg.description = description
@@ -90,8 +98,13 @@ sealed class BaseNode<_USER> : Node<_USER>() {
     }
 }
 
-fun <S> cmd(name: String, vararg aliases: String, block: FunctionNode<S>.() -> Unit = {}): FunctionNode<S> {
-    val functionNode = FunctionNode<S>(name, *aliases)
+fun <S> cmd(
+    name: String,
+    vararg aliases: String,
+    group: String? = null,
+    block: FunctionNode<S>.() -> Unit = {}
+): FunctionNode<S> {
+    val functionNode = FunctionNode<S>(name, *aliases, group = group)
     block(functionNode)
     return functionNode
 }
