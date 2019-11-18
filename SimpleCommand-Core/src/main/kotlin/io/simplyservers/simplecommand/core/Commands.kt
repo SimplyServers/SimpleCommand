@@ -6,9 +6,12 @@ typealias PermissionGetter<_USER> = (_USER, Permissible) -> Boolean
 
 fun <T> has(permission: String): PermissionGetter<T> = { _, hasPermission -> hasPermission(permission) }
 
-class FunctionNode<_USER>(val name: String, vararg val aliases: String, val group: String? = null) : BaseNode<_USER>() {
+class FunctionNode<_USER>(val name: String, vararg val aliases: String, val group: String? = null, private val previousPath: String) : BaseNode<_USER>() {
     var description: String? = null
-    var permission: PermissionGetter<_USER>? = null
+    var permission: PermissionGetter<_USER>? = {s, hasPerm -> hasPerm(path) }
+
+    override val path get() = genPath(previousPath)
+
     override fun toString(): String {
         return "FunctionNode(name='$name', aliases=${aliases.contentToString()}, description=$description, permission=$permission)"
     }
@@ -24,7 +27,7 @@ val FunctionNode<*>.equivalentNames
 fun FunctionNode<*>.matches(matchName: String): Boolean =
     equivalentNames.any { it.equals(matchName, ignoreCase = true) }
 
-class ArgumentPreNode<_USER>(val referenceName: String) : Node<_USER>() {
+class ArgumentPreNode<_USER>(val referenceName: String, private val previousPath: String) : Node<_USER>() {
 
     init {
         require(referenceName.oneWord) { "referenceName must be one word" }
@@ -33,7 +36,7 @@ class ArgumentPreNode<_USER>(val referenceName: String) : Node<_USER>() {
     var description: String? = null
 
     fun <_ARGTYPE> ifType(argumentType: ArgumentType<_ARGTYPE>, block: ArgumentNode<_USER, _ARGTYPE>.() -> Unit) {
-        val argumentNode = ArgumentNode<_USER, _ARGTYPE>(referenceName, argumentType)
+        val argumentNode = ArgumentNode<_USER, _ARGTYPE>(referenceName, argumentType, previousPath)
         children.add(argumentNode)
         block(argumentNode)
     }
@@ -47,8 +50,9 @@ sealed class Node<S> {
     val children = ArrayList<Node<S>>()
 }
 
-class ArgumentNode<S, T>(val referenceName: String, val argumentType: ArgumentType<T>) : BaseNode<S>() {
+class ArgumentNode<S, T>(val referenceName: String, val argumentType: ArgumentType<T>, private val previousPath: String) : BaseNode<S>() {
     var description: String? = null
+    override val path get() = "$previousPath.${argumentType.name}"
     override fun toString(): String {
         return "ArgumentNode(referenceName='$referenceName', argumentType=$argumentType, description=$description)"
     }
@@ -56,29 +60,20 @@ class ArgumentNode<S, T>(val referenceName: String, val argumentType: ArgumentTy
 
 sealed class BaseNode<_USER> : Node<_USER>() {
 
+    open val path: String get() = ""
     val executions = ArrayList<suspend (sender: _USER, node: Node<_USER>, args: Map<String, Any?>) -> Unit>()
 
     fun subCmd(name: String, vararg aliases: String, block: FunctionNode<_USER>.() -> Unit) {
         require(name.oneWord) { "The name must be one word" }
-        cmd<_USER>(name, *aliases) {
+        cmd<_USER>(name, *aliases, startingPath = path) {
             block(this)
             this@BaseNode.children.add(this)
         }
     }
 
-    fun subCmd(name: String, vararg aliases: String, functionNode: FunctionNode<_USER>) {
-        require(name.oneWord) { "The name must be one word" }
-        children.add(functionNode)
-    }
+    fun <T> argWithType(referenceName: String, type: ArgumentType<T>, description: String? = null, block: ArgumentNode<_USER, T>.() -> Unit) {
 
-    fun <T> argWithType(
-        referenceName: String,
-        type: ArgumentType<T>,
-        description: String? = null,
-        block: ArgumentNode<_USER, T>.() -> Unit
-    ) {
-
-        val arg = ArgumentPreNode<_USER>(referenceName)
+        val arg = ArgumentPreNode<_USER>(referenceName, path)
         arg.description = description
         arg.ifType(type, block)
 
@@ -86,7 +81,7 @@ sealed class BaseNode<_USER> : Node<_USER>() {
     }
 
     fun arg(referenceName: String, block: ArgumentPreNode<_USER>.() -> Unit) {
-        val arg = ArgumentPreNode<_USER>(referenceName)
+        val arg = ArgumentPreNode<_USER>(referenceName, path)
         block(arg)
         // TODO: fix
         this@BaseNode.children.add(arg)
@@ -98,14 +93,11 @@ sealed class BaseNode<_USER> : Node<_USER>() {
     }
 }
 
-fun <S> cmd(
-    name: String,
-    vararg aliases: String,
-    group: String? = null,
-    block: FunctionNode<S>.() -> Unit = {}
-): FunctionNode<S> {
-    val functionNode = FunctionNode<S>(name, *aliases, group = group)
+fun <S> cmd(name: String, vararg aliases: String, group: String? = null, startingPath: String = "", block: FunctionNode<S>.() -> Unit = {}): FunctionNode<S> {
+    val functionNode = FunctionNode<S>(name, *aliases, group = group, previousPath = startingPath)
     block(functionNode)
     return functionNode
 }
 
+private fun FunctionNode<*>.genPath(path: String? = null) =
+    listOfNotNull(path, group, name).joinToString(separator = ".")
