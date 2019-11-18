@@ -9,8 +9,8 @@ class TestCommand {
 
     private val testCommand by lazy {
         cmd<MockPlayer>("simpletest", "a") {
+            basePath = "simpletest.use"
             subCmd("subcmd1") {
-                permission = has("simpletest.use.subcmd")
                 execute { sender, _, _ ->
                     sender.sendMessage("Ran subcmd 1")
                 }
@@ -51,10 +51,10 @@ class TestCommand {
         val sender = BaseMockPlayer()
         try {
             runBlocking {
-                commandExecutor(testCommand, sender, "subcmd3".toArgs())
+                commandExecutor(testCommand, sender, sender.permissionsSeq, "subcmd3".toArgs())
             }
         } catch (e: CommandSyntaxException) {
-            val message = Formatter.generateHelpMessage(e).length
+            val message = DefaultFormatter<MockPlayer>(sender, sender.permissionsSeq).generateHelpMessage(e).length
             val ideal = 124
             Assertions.assertEquals(ideal, message)
         }
@@ -65,22 +65,27 @@ class TestCommand {
         val sender = BaseMockPlayer()
         assertThrows<PermissionException> {
             runBlocking {
-                commandExecutor(testCommand, sender, "subcmd1 test".toArgs())
+                commandExecutor(testCommand, sender, sender.permissionsSeq, "subcmd1 test".toArgs())
             }
         }
         assertThrows<PermissionException> {
             runBlocking {
-                commandExecutor(testCommand, sender, "subcmd1".toArgs())
+                commandExecutor(testCommand, sender, sender.permissionsSeq, "subcmd1".toArgs())
             }
         }
     }
 
     @Test
     fun `test has perms`() {
-        val sender = BaseMockPlayer("simpletest.use.subcmd")
+        val sender = BaseMockPlayer("simpletest.use.subcmd1")
         runBlocking {
-            commandExecutor(testCommand, sender, "subcmd1 test".toArgs())
-            commandExecutor(testCommand, sender, "subcmd1".toArgs())
+            commandExecutor(testCommand, sender, sender.permissionsSeq, "subcmd1 test".toArgs())
+            commandExecutor(testCommand, sender, sender.permissionsSeq, "subcmd1".toArgs())
+        }
+        assertThrows<PermissionException> {
+            runBlocking {
+                commandExecutor(testCommand, sender, sender.permissionsSeq, "subcmd2".toArgs())
+            }
         }
     }
 }

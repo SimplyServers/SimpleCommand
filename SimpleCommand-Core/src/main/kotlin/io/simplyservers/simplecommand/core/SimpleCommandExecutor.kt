@@ -3,7 +3,7 @@ package io.simplyservers.simplecommand.core
 import java.util.*
 
 
-suspend fun <S> commandExecutor(baseNode: FunctionNode<S>, executeSender: S, hasPermission: Permissible, args: Array<String>) {
+suspend fun <S> commandExecutor(baseNode: FunctionNode<S>, executeSender: S, permissions: Sequence<String>, args: Array<String>) {
     val argsMap = HashMap<String, Any>()
 
     suspend fun matchingNode(nodeOn: Node<S>, currentArgs: List<String>) {
@@ -11,7 +11,7 @@ suspend fun <S> commandExecutor(baseNode: FunctionNode<S>, executeSender: S, has
         if (nodeOn is FunctionNode) {
             val permissionGetter = nodeOn.permission
             if (permissionGetter != null) {
-                val pg = permissionGetter(executeSender, hasPermission)
+                val pg = permissionGetter(executeSender, permissions)
                 if (!pg) throw PermissionException()
             }
         }
@@ -144,4 +144,4 @@ class DefaultFormatter<S>(private val user: S, private val permissible: Permissi
 
 fun String.toArgs() = trim().split(" ").toTypedArray()
 
-typealias Permissible = (String) -> Boolean
+typealias Permissible = Sequence<String>

@@ -4,7 +4,6 @@ import io.simplyservers.simplecommand.core.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.bukkit.command.Command
 import org.bukkit.command.CommandExecutor
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
@@ -16,16 +15,23 @@ fun bCmd(name: String, vararg aliases: String, block: FunctionNode<CommandSender
     cmd(name, *aliases, block = block)
 
 
+
+fun listPerms(sender: CommandSender): Sequence<String> {
+    val effectivePermissions = sender.effectivePermissions
+    return effectivePermissions.asSequence()
+        .filter { it.value }
+        .map { it.permission }
+}
+
 fun FunctionNode<CommandSender>.register(plugin: Plugin, scope: CoroutineScope = GlobalScope) {
     val commandExecutor = CommandExecutor { sender, command, label, args ->
         scope.launch {
             try {
-                commandExecutor(this@register, sender, sender::hasPermission, args)
+                commandExecutor(this@register, sender, listPerms(sender), args)
             } catch (e: PermissionException) {
                 sender.sendMessage("You do not have permission")
             } catch (e: CommandSyntaxException) {
                 sender.sendMessage("Wrong syntax")
-//                        sender.sendMessage(Formatter.generateHelpMessage(e).replace("\t", "  "))
             } catch (e: PlayerMessageException) {
                 if (e.message != null) sender.sendMessage(e.message)
             }

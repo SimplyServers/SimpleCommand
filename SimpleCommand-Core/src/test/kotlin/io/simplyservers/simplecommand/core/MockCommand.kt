@@ -1,18 +1,14 @@
 package io.simplyservers.simplecommand.core
 
 interface MockPlayer {
-    fun hasPermission(permission: String): Boolean
+    val permissionsSeq: Sequence<String>
     fun sendMessage(message: String)
 }
 
-class BaseMockPlayer(private vararg val permissions: String, private val messageBlocker: (String) -> Unit = {}) : MockPlayer {
+class BaseMockPlayer(vararg permissions: String, private val messageBlocker: (String) -> Unit = {}) : MockPlayer {
+    override val permissionsSeq = permissions.asSequence()
     override fun sendMessage(message: String) {
         messageBlocker(message)
     }
-
-    override fun hasPermission(permission: String): Boolean {
-        return permissions.contains(permission)
-    }
 }
 
-fun has(permission: String) = { sender: MockPlayer -> sender.hasPermission(permission) }
