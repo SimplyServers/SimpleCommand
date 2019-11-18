@@ -48,14 +48,14 @@ class TestCommand {
 
     @Test
     fun `test help`() {
-        val sender = BaseMockPlayer()
+        val sender = BaseMockPlayer("simpletest.use.subcmd3")
         try {
             runBlocking {
                 commandExecutor(testCommand, sender, sender.permissionsSeq, "subcmd3".toArgs())
             }
         } catch (e: CommandSyntaxException) {
             val message = DefaultFormatter<MockPlayer>(sender, sender.permissionsSeq).generateHelpMessage(e).length
-            val ideal = 124
+            val ideal = 63
             Assertions.assertEquals(ideal, message)
         }
     }
