@@ -15,7 +15,6 @@ fun bCmd(name: String, vararg aliases: String, block: FunctionNode<CommandSender
     cmd(name, *aliases, block = block)
 
 
-
 fun listPerms(sender: CommandSender): Sequence<String> {
     val effectivePermissions = sender.effectivePermissions
     return effectivePermissions.asSequence()
@@ -32,16 +31,20 @@ fun FunctionNode<CommandSender>.register(plugin: Plugin, scope: CoroutineScope =
                 sender.sendMessage("You do not have permission")
             } catch (e: CommandSyntaxException) {
                 sender.sendMessage("Wrong syntax")
+                val message = DefaultFormatter<CommandSender>(sender, listPerms(sender))
+                    .generateHelpMessage(e)
+                    .replace("\t", "  ")
+                sender.sendMessage(message)
             } catch (e: PlayerMessageException) {
                 if (e.message != null) sender.sendMessage(e.message)
             }
         }
         true
     }
-    val pluginCommand = plugin.server.getPluginCommand(name).apply {
+    plugin.server.getPluginCommand(name)?.apply {
         executor = commandExecutor
         aliases = aliases.toList()
-    }
+    } ?: throw IllegalArgumentException("The command $name must be registered in your plugin.yml")
 }
 
 fun CommandSender.requirePlayer(message: String? = "Not a player") =
@@ -52,11 +55,12 @@ fun <T> T?.requireNotNull(message: String? = "") = this ?: throw PlayerMessageEx
 interface RequireMid<T> {
     fun onFail(block: T.() -> String): T
 }
+
 fun <T> T.require(block: T.() -> Boolean): RequireMid<T> {
     val result = block()
-    return object: RequireMid<T> {
+    return object : RequireMid<T> {
         override fun onFail(block: (T) -> String): T {
-            if(result) return this@require
+            if (result) return this@require
             throw PlayerMessageException(block(this@require))
         }
     }
